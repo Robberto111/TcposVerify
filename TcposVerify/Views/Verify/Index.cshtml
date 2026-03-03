@@ -1,0 +1,145 @@
+@model TcposVerify.Models.VerifyViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCPOS Verify</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: @Model.BgColor;
+            color: white;
+            padding: 20px;
+            transition: background 0.4s;
+        }
+        .card {
+            text-align: center;
+            background: rgba(0,0,0,0.2);
+            padding: 32px 24px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.4);
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .logo {
+            font-size: 0.85em;
+            opacity: 0.6;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .big {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin: 8px 0 20px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .info {
+            font-size: 1.1em;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            margin-top: 12px;
+            padding-top: 16px;
+            line-height: 2;
+        }
+        .info span {
+            opacity: 0.75;
+            font-size: 0.85em;
+            display: block;
+            line-height: 1.2;
+        }
+        .info strong { font-size: 1.1em; }
+        .totale-big {
+            font-size: 1.8em;
+            display: block;
+        }
+        .guida {
+            font-size: 0.8em;
+            opacity: 0.85;
+            background: rgba(0,0,0,0.15);
+            border-radius: 8px;
+            padding: 4px 8px;
+            display: inline-block;
+            margin-top: 2px;
+            margin-bottom: 8px;
+        }
+        .mondrian-wrap { margin: 18px auto 4px; }
+        .mondrian-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 72px;
+            height: 72px;
+            margin: 0 auto;
+            border: 4px solid rgba(255,255,255,0.6);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .m-cell { width: 36px; height: 36px; }
+        .mondrian-label {
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.6;
+            margin-top: 6px;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.72em;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">TCPOS Verify</div>
+    <div class="big">@Model.StatusText</div>
+
+    @if (Model.MostraDati)
+    {
+        <div class="info">
+            <span>Negozio</span>
+            <strong>@Model.Negozio</strong>
+
+            <span>Cassa</span>
+            <strong>@Model.Cassa</strong>
+
+            <span>N. Scontrino</span>
+            <strong>#@Model.NTransazione</strong>
+
+            <span>Totale</span>
+            <strong class="totale-big">@Model.TotaleEuro €</strong>
+
+            <span>Emesso il</span>
+            <strong>@Model.DataOra</strong>
+            <span class="guida">👆 Confronta i dati con quanto stampato sullo scontrino</span>
+        </div>
+    }
+
+    @if (Model.Mondrian.Length == 4)
+    {
+        <div class="mondrian-wrap">
+            <div class="mondrian-container">
+                <div class="m-cell" style="background:@Model.Mondrian[0]"></div>
+                <div class="m-cell" style="background:@Model.Mondrian[1]"></div>
+                <div class="m-cell" style="background:@Model.Mondrian[2]"></div>
+                <div class="m-cell" style="background:@Model.Mondrian[3]"></div>
+            </div>
+            <div class="mondrian-label">Sigillo di sicurezza</div>
+        </div>
+    }
+
+    <div class="footer">
+        Verifica eseguita il @Model.VerificaIl.ToString("dd/MM/yyyy alle HH:mm:ss")
+    </div>
+</div>
+</body>
+</html>

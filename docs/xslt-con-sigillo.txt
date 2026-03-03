@@ -1,0 +1,157 @@
+<!-- ============================================================ -->
+<!--  TCPOS VERIFY - QR CODE AUTENTICITA SCONTRINO                -->
+<!--  Versione compatibile con Verify PHP v2.0                    -->
+<!--  Checksum NON LINEARE + Secret variabile per data intera     -->
+<!--  + Anti-Reverse Engineering Avanzato                         -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!--  1. PREPARAZIONE DATA                                       -->
+<!-- ============================================================ -->
+<!--
+trans-date formato originale TCPOS: GG.MM.AAAA
+Esempio: 23.02.2026 La pagina PHP si aspetta: GGMMAAAA senza punti
+-->
+<xsl:variable name="clean_date" select="translate(trans-date, '.', '')" />
+
+<!-- Estrazione giorno (serve per la logica polimorfica pari/dispari) -->
+<xsl:variable name="giorno" select="substring($clean_date, 1, 2)" />
+
+<!-- Conversione numerica dell'intera data (GGMMAAAA) -->
+<xsl:variable name="date_num" select="number($clean_date)" />
+
+<!-- ============================================================ -->
+<!--  2. CALCOLO DEI SECRET DINAMICI BASATI SULLA DATA           -->
+<!-- ============================================================ -->
+<xsl:variable name="d_hi" select="floor($date_num div 1000)" />
+<xsl:variable name="d_lo" select="$date_num mod 1000" />
+<xsl:variable name="K" select="( ((($d_hi * 7919) mod 2147483647) * 1000) + ($d_lo * 7919) ) mod 2147483647" />
+<xsl:variable name="S1" select="(982451653 + $date_num + $K) mod 2147483647" />
+<xsl:variable name="S2" select="(15485863 + ($date_num * 7) + $K) mod 2147483587" />
+<xsl:variable name="S3" select="(32452843 + ($date_num * 13) + $K) mod 2147483549" />
+<xsl:variable name="S3_hi" select="floor($S3 div 1000)" />
+<xsl:variable name="S3_lo" select="$S3 mod 1000" />
+
+<xsl:variable name="mod_dinamico" select="900000000 + (number($giorno) * 1000000)" />
+
+<!-- ============================================================ -->
+<!--  3. NORMALIZZAZIONE NUMERICA DEI CAMPI                       -->
+<!-- ============================================================ -->
+<!--
+Rimuove le lettere da:
+- shop/code (es. CM0001)
+- till/code (es. CM000201)
+-->
+<xsl:variable name="neg_num" select="number(translate(shop/code, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', ''))"/>
+<xsl:variable name="ti_num" select="number(translate(till/code, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', ''))"/>
+
+<!-- Numero transazione -->
+<xsl:variable name="tr_num" select="number(trans-num)"/>
+
+<!-- Totale convertito in centesimi -->
+<xsl:variable name="tot_num" select="floor((total * 100) + 0.5)"/>
+
+<!-- ============================================================ -->
+<!--  4. CHECKSUM NON LINEARE CON LOGICA POLIMORFICA              -->
+<!-- ============================================================ -->
+<xsl:variable name="ck_base">
+  <xsl:choose>
+    <!-- ===== GIORNI DISPARI ===== -->
+    <xsl:when test="((number($giorno) * 17) + 3) mod 2 != 0">
+       <xsl:variable name="n_hi" select="floor($neg_num div 1000)"/>
+       <xsl:variable name="n_lo" select="$neg_num mod 1000"/>
+       <xsl:variable name="neg_x_S1" select="( ((($n_hi * $S1) mod 2147483647) * 1000) + ($n_lo * $S1) ) mod 2147483647"/>
+       <xsl:variable name="ti_hi" select="floor($ti_num div 1000)"/>
+       <xsl:variable name="ti_lo" select="$ti_num mod 1000"/>
+       <xsl:variable name="ti_x_S2" select="( ((($ti_hi * $S2) mod 2147483647) * 1000) + ($ti_lo * $S2) ) mod 2147483647"/>
+       <xsl:variable name="step1" select="($neg_x_S1 + $ti_x_S2) mod 2147483647"/>
+       <xsl:variable name="tmp2" select="($step1 + $tr_num) mod 2147483587"/>
+       <xsl:variable name="step2" select="( ((($tmp2 * $S3_hi) mod 2147483587) * 1000) + ($tmp2 * $S3_lo) ) mod 2147483587"/>
+       <xsl:value-of select="(($step2 * 31) + ($tot_num * 17)) mod $mod_dinamico"/>
+    </xsl:when>
+    <!-- ===== GIORNI PARI ===== -->
+    <xsl:otherwise>
+       <xsl:variable name="t_hi" select="floor($tot_num div 1000)"/>
+       <xsl:variable name="t_lo" select="$tot_num mod 1000"/>
+       <xsl:variable name="tot_x_S1" select="( ((($t_hi * $S1) mod 2147483647) * 1000) + ($t_lo * $S1) ) mod 2147483647"/>
+       <xsl:variable name="tr_hi" select="floor($tr_num div 1000)"/>
+       <xsl:variable name="tr_lo" select="$tr_num mod 1000"/>
+       <xsl:variable name="tr_x_S2" select="( ((($tr_hi * $S2) mod 2147483647) * 1000) + ($tr_lo * $S2) ) mod 2147483647"/>
+       <xsl:variable name="step1" select="($tot_x_S1 + $tr_x_S2) mod 2147483647"/>
+       <xsl:variable name="tmp2" select="($step1 + $ti_num) mod 2147483587"/>
+       <xsl:variable name="step2" select="( ((($tmp2 * $S3_hi) mod 2147483587) * 1000) + ($tmp2 * $S3_lo) ) mod 2147483587"/>
+       <xsl:value-of select="(($step2 * 31) + ($neg_num * 17)) mod $mod_dinamico"/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:variable>
+
+<xsl:variable name="tot_str" select="string($tot_num)"/>
+<xsl:variable name="cifra_extra" select="(
+  number(substring($tot_str,1,1)) + 
+  number(concat('0',substring($tot_str,2,1))) + 
+  number(concat('0',substring($tot_str,3,1))) + 
+  number(concat('0',substring($tot_str,4,1))) + 
+  number(concat('0',substring($tot_str,5,1))) + 
+  number(concat('0',substring($tot_str,6,1))) + 
+  number(concat('0',substring($tot_str,7,1)))
+) mod 10"/>
+
+<xsl:variable name="ck" select="concat(format-number($ck_base, '000000000'), $cifra_extra)"/>
+
+<!-- ============================================================ -->
+<!--  5. HONEY-TRAP: calcolo parametro h                          -->
+<!-- ============================================================ -->
+<xsl:variable name="h_hi"     select="floor($tr_num div 1000)"/>
+<xsl:variable name="h_lo"     select="$tr_num mod 1000"/>
+<xsl:variable name="h_step1"  select="( ((($h_hi * $S2) mod 2147483587) * 1000) + ($h_lo * $S2) ) mod 2147483587"/>
+<xsl:variable name="h_tmp"    select="($h_step1 + $neg_num + $ti_num) mod 2147483549"/>
+<xsl:variable name="h_tmp_hi" select="floor($h_tmp div 1000)"/>
+<xsl:variable name="h_tmp_lo" select="$h_tmp mod 1000"/>
+<xsl:variable name="h_val"    select="( ((($h_tmp_hi * $S1) mod 2147483647) * 1000) + ($h_tmp_lo * $S1) ) mod 2147483647"/>
+<xsl:variable name="h"        select="format-number($h_val mod 100000, '00000')"/>
+
+<!-- ============================================================ -->
+<!--  6. COSTRUZIONE URL DI VERIFICA                              -->
+<!-- ============================================================ -->
+<xsl:variable name="qr_url" select="concat(
+    'https://www.nsh.it/v.php?',
+    'neg=', shop/code,
+    '&amp;ti=',  till/code,
+    '&amp;tr=',  trans-num,
+    '&amp;d=',   $clean_date,
+    '&amp;t=',   translate(trans-time, ':', ''),
+    '&amp;tot=', $tot_num,
+    '&amp;ck=',  $ck,
+    '&amp;h=',   $h
+)"/>
+
+<!-- ============================================================ -->
+<!--  7. STAMPA QR CODE ESC/POS                                   -->
+<!-- ============================================================ -->
+
+<BR/>
+<!--
+Calcolo lunghezza payload QR:
+(string-length + 3) mod 256
+Serve per comando ESC/POS
+-->
+<xsl:variable name="qr_pL" select="(string-length($qr_url) + 3) mod 256"/>
+<!-- Model 2 -->
+<ESC>29,40,107,4,0,49,65,50,0</ESC>
+<!-- Dimensione modulo -->
+<ESC>29,40,107,3,0,49,67,4</ESC>
+<!-- Livello correzione errori -->
+<ESC>29,40,107,3,0,49,69,48</ESC>
+<!-- Memorizzazione dati -->
+<ESC>
+  <xsl:value-of select="concat('29,40,107,', $qr_pL, ',0,49,80,48')"/>
+</ESC>
+<xsl:value-of select="$qr_url"/>
+<!-- Stampa QR -->
+<ESC>29,40,107,3,0,49,81,48</ESC>
+<BR/>
+<BR/>
+
+<!-- ============================================================ -->
+<!--  FINE TCPOS VERIFY - QR CODE AUTENTICITA SCONTRINO           -->
+<!-- ============================================================ -->
