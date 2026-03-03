@@ -72,3 +72,11 @@ jobs:
         git add version.txt
         git commit -m "chore: bump version to ${{ steps.bump_version.outputs.NEW_VERSION }}"
         git push
+    - name: Create GitHub Release
+      run: |
+        gh release create v${{ steps.bump_version.outputs.NEW_VERSION }} `
+          ./release-${{ steps.bump_version.outputs.NEW_VERSION }}.zip `
+          --title "Release v${{ steps.bump_version.outputs.NEW_VERSION }}" `
+          --notes "Automated release v${{ steps.bump_version.outputs.NEW_VERSION }}"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
