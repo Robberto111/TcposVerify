@@ -10,7 +10,7 @@ public class InMemoryVerifyRepository : IVerifyRepository
 {
 	// HashSet thread-safe tramite lock — chiave: "neg|ti|tr|d"
 	private readonly HashSet<string> _records = [];
-	private readonly object            _lock    = new();
+	private readonly Lock _lock    = new();
 
 	//////////////////////////////////////////////////////////////
 	public Task<bool/*Creato*/> EnsureRecordAsync(
@@ -34,14 +34,14 @@ public class InMemoryVerifyRepository : IVerifyRepository
 	{
 		lock (_lock)
 		{
-			bool exixsts = _records.Any(i => i.StartsWith(uniqueIdentifier));
+			bool exists = _records.Any(i => i.StartsWith(uniqueIdentifier));
 
-			return Task.FromResult(exixsts);
+			return Task.FromResult(exists);
 		}
 	}
 
     //////////////////////////////////////////////////////////////
-    public async Task UpdateRecordAsync(DateTime ultimoTentativoDiLettura, string uniqueIdentifier, LETTO_STATO? stato = null)
+    public Task UpdateRecordAsync(DateTime ultimoTentativoDiLettura, string uniqueIdentifier, LETTO_STATO? stato = null)
     {
 		string key = uniqueIdentifier + ultimoTentativoDiLettura.ToString("o"); // "o" = formato ISO 8601, es: "2024-06-30T12:34:56.789Z"
 		lock (_lock)
@@ -51,5 +51,6 @@ public class InMemoryVerifyRepository : IVerifyRepository
 			// Aggiunge nuovo record con timestamp aggiornato
 			_records.Add(key);
 		}
-	}
+        return Task.CompletedTask;
+    }
 }
