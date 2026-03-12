@@ -15,11 +15,7 @@ public class VerifyService : IVerifyService
 
 
 	//////////////////////////////////////////////////////////////
-	public VerifyService(
-		IVerifyRepository repository,
-		ChecksumService checksum,
-		MondrianService mondrian,
-		ILogger<VerifyService> logger)
+	public VerifyService(IVerifyRepository repository, ChecksumService checksum, MondrianService mondrian, ILogger<VerifyService> logger)
 	{
 		m_Repository = repository;
 		m_Checksum   = checksum;
@@ -31,17 +27,30 @@ public class VerifyService : IVerifyService
 	//////////////////////////////////////////////////////////////
 	public async Task<VerifyViewModel> VerifyAsync(VerifyRequest req, string uniqueIdentifier, string queryString)
 	{
-		var emissioneScontrino = new DateTime(
-			year: int.Parse(req.D.Substring(4, 4)),
-			month: int.Parse(req.D.Substring(2, 2)),
-			day: int.Parse(req.D.Substring(0, 2)),
-			hour: int.Parse(req.T.Substring(0, 2)),
-			minute: int.Parse(req.T.Substring(2, 2)),
-			second: int.Parse(req.T.Substring(4, 2)),
-			DateTimeKind.Local)
-		;
+		if (req.D?.Length < 8 || req.T?.Length < 6 // data invalida
+        || !int.TryParse(req.D!.Substring(4, 4), out int year)
+		|| !int.TryParse(req.D!.Substring(2, 2), out int month)
+		|| !int.TryParse(req.D!.Substring(0, 2), out int day)
+		|| !int.TryParse(req.T!.Substring(0, 2), out int hour)
+		|| !int.TryParse(req.T!.Substring(2, 2), out int minute)
+		|| !int.TryParse(req.T!.Substring(4, 2), out int second)
+		|| year < 1753
+        )
+		{
+            _logger.LogWarning("Data or ora invalida p={Path}", queryString);
 
-		bool esistevaGia = !(await m_Repository.EnsureRecordAsync(emissioneScontrino, DateTime.Now, req.Neg, req.Ti, req.Tr, req.Tot, uniqueIdentifier));
+            return VerifyViewModel.Falso(MondrianAvvelenato(req));
+        }
+
+		var emissioneScontrino = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Local);
+
+        string totEuro = Utilities.GenericChekers.FormatTotale(req.Tot);
+        string dataOra = Utilities.GenericChekers.FormatDataOra(req.D, req.T);
+
+        if (DateTime.Now < emissioneScontrino)
+        {
+            return VerifyViewModel.Scaduto(req.Neg, req.Ti, req.Tr, totEuro, dataOra, MondrianAvvelenato(req), numeroVolteLetto: 0);
+        }
 
 		// 3. Verifica checksum
 		string ckCalcolato = m_Checksum.CalcolaChecksum(req.Neg, req.Ti, req.Tr, req.D, req.T, req.Tot);
@@ -50,10 +59,11 @@ public class VerifyService : IVerifyService
 		{
 			_logger.LogWarning("CK_ERRATO p={Path}", queryString);
 
-			await m_Repository.UpdateRecordAsync(DateTime.Now, uniqueIdentifier, LETTO_STATO.INVALIDO);
-
-			return VerifyViewModel.Falso(MondrianAvvelenato(req));
+            return VerifyViewModel.Falso(MondrianAvvelenato(req));
 		}
+
+        bool esistevaGia = !(await m_Repository.EnsureRecordAsync(emissioneScontrino, DateTime.Now, req.Neg, req.Ti, req.Tr, req.Tot, uniqueIdentifier));
+		int numeroVolteLetto = 0;
 
 		// 4. Honey-trap h
 		string hCalcolato = m_Checksum.CalcolaH(req.Neg, req.Ti, req.Tr, req.D);
@@ -69,27 +79,24 @@ public class VerifyService : IVerifyService
 		// 5. Scadenza 4 ore
 		bool scaduto = Utilities.GenericChekers.IsScaduto(emissioneScontrino, ScadenzaSecondi);
 
-		// Dati display
-		string totEuro   = Utilities.GenericChekers.FormatTotale(req.Tot);
-		string dataOra   = Utilities.GenericChekers.FormatDataOra(req.D, req.T);
 
 		// 6. Controllo unicità
 		if (esistevaGia)
 		{
 			_logger.LogInformation("GIA_USATO p={Path}", queryString);
 
-			await m_Repository.UpdateRecordAsync(DateTime.Now, uniqueIdentifier);
+            numeroVolteLetto = await m_Repository.UpdateRecordAsync(DateTime.Now, uniqueIdentifier);
 
-			return VerifyViewModel.GiaUsato(req.Neg, req.Ti, req.Tr, totEuro, dataOra, mondrian);
+			return VerifyViewModel.GiaUsato(req.Neg, req.Ti, req.Tr, totEuro, dataOra, mondrian, numeroVolteLetto);
 		}
 
 		if (scaduto)
 		{
 			_logger.LogInformation("SCADUTO p={Path}", queryString);
 
-			await m_Repository.UpdateRecordAsync(DateTime.Now, uniqueIdentifier, LETTO_STATO.SCADUTO);
+            numeroVolteLetto = await m_Repository.UpdateRecordAsync(DateTime.Now, uniqueIdentifier, LETTO_STATO.SCADUTO);
 
-			return VerifyViewModel.Scaduto(req.Neg, req.Ti, req.Tr, totEuro, dataOra, mondrian);
+			return VerifyViewModel.Scaduto(req.Neg, req.Ti, req.Tr, totEuro, dataOra, mondrian, numeroVolteLetto);
 		}
 
 		return VerifyViewModel.Valido(req.Neg, req.Ti, req.Tr, totEuro, dataOra, mondrian);

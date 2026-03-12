@@ -43,6 +43,8 @@ public class VerifyViewModel
 	/// <summary>Colore sfondo della card (#27ae60, #c0392b, ecc.)</summary>
 	public string BgColor { get; set; } = "#555555";
 
+	public int NumeroVolteLetto { get; set; } = 0;
+
 	public string? Negozio { get; set; }
 	public string? Cassa { get; set; }
 	public string? NTransazione { get; set; }
@@ -56,19 +58,21 @@ public class VerifyViewModel
 	public string[] Mondrian { get; set; } = [];
 	public DateTime VerificaIl { get; set; } = DateTime.Now;
 
-	public static VerifyViewModel Falso(string[] mondrian) => new()
+	public static VerifyViewModel Falso(string[] mondrian, int numeroVolteLetto = 0) => new()
 	{
 		Stato = "FALSO",
 		StatusText = "✗ NON VALIDO / FALSO",
 		BgColor = "#c0392b",
+		NumeroVolteLetto = numeroVolteLetto,
 		Mondrian = mondrian
 	};
 
-	public static VerifyViewModel Scaduto(string neg, string ti, string tr, string totEuro, string dataOra, string[] mondrian) => new()
+	public static VerifyViewModel Scaduto(string neg, string ti, string tr, string totEuro, string dataOra, string[] mondrian, int numeroVolteLetto) => new()
 	{
 		Stato = "SCADUTO",
 		StatusText = "⚠ SCADUTO (>4h)",
 		BgColor = "#e67e22",
+		NumeroVolteLetto = numeroVolteLetto,
 		Negozio =neg,
 		Cassa = ti,
 		NTransazione = tr,
@@ -77,11 +81,12 @@ public class VerifyViewModel
 		Mondrian = mondrian,
 	};
 
-	public static VerifyViewModel GiaUsato(string neg, string ti, string tr, string totEuro, string dataOra, string[] mondrian) => new()
+	public static VerifyViewModel GiaUsato(string neg, string ti, string tr, string totEuro, string dataOra, string[] mondrian, int numeroVolteLetto) => new()
 	{
 		Stato = "GIA_USATO",
 		StatusText = "✗ GIÀ UTILIZZATO",
 		BgColor = "#c0392b",
+		NumeroVolteLetto = numeroVolteLetto,
 		Negozio = neg,
 		Cassa = ti,
 		NTransazione = tr,
@@ -90,16 +95,16 @@ public class VerifyViewModel
 		Mondrian = mondrian,
 	};
 
-    public static VerifyViewModel Valido(string neg, string ti, string tr, string totEuro, string dataOra, string[] mondrian) => new()
+	public static VerifyViewModel Valido(string neg, string ti, string tr, string totEuro, string dataOra, string[] mondrian) => new()
 	{
-        Stato = "VALIDO",
-        StatusText = "✓ VALIDO",
-        BgColor = "#27ae60",
-        Negozio = neg,
-        Cassa = ti,
-        NTransazione = tr,
-        TotaleEuro = totEuro,
-        DataOra = dataOra,
-        Mondrian = mondrian,
-    };
+		Stato = "VALIDO",
+		StatusText = "✓ VALIDO",
+		BgColor = "#27ae60",
+		Negozio = neg,
+		Cassa = ti,
+		NTransazione = tr,
+		TotaleEuro = totEuro,
+		DataOra = dataOra,
+		Mondrian = mondrian,
+	};
 }

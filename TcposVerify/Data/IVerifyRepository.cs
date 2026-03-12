@@ -8,7 +8,7 @@ public interface IVerifyRepository
 {
     //////////////////////////////////////////////////////////////
     /// <summary>
-    /// Ritorna true se il record è stato creato (non esisteva già), false se esisteva già.
+    /// Ritorna false se il record è stato creato (non esisteva già), true se esisteva già.
     /// </summary>
     Task<bool> EnsureRecordAsync(
 		DateTime emissioneScontrino,
@@ -24,5 +24,5 @@ public interface IVerifyRepository
 	Task<bool> ExistsAsync(string queryString);
 
 	//////////////////////////////////////////////////////////////
-	Task UpdateRecordAsync(DateTime ultimoTentativoDiLettura, string queryString, LETTO_STATO? stato = null);
+	Task<int/*count*/> UpdateRecordAsync(DateTime ultimoTentativoDiLettura, string queryString, LETTO_STATO? stato = null);
 }

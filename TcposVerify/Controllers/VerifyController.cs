@@ -34,21 +34,6 @@ public partial class VerifyController : Controller
 			});
 		}
 
-		var emissioneScontrino = new DateTime(
-			year: int.Parse(req.D.Substring(4, 4)),
-			month: int.Parse(req.D.Substring(2, 2)),
-			day: int.Parse(req.D.Substring(0, 2)),
-			hour: int.Parse(req.T.Substring(0, 2)),
-			minute: int.Parse(req.T.Substring(2, 2)),
-			second: int.Parse(req.T.Substring(4, 2)),
-			DateTimeKind.Local)
-		;
-		if (DateTime.Now < emissioneScontrino)
-		{
-			return View(VerifyViewModel.Falso(new string[] {}));
-
-        }
-
 		try
 		{
 			string uniqueIdentifier = $"{req.Neg}_{req.Ti}_{req.Tr}_{req.Ck}_{req.H}";

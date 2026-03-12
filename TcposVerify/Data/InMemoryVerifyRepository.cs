@@ -41,7 +41,7 @@ public class InMemoryVerifyRepository : IVerifyRepository
 	}
 
     //////////////////////////////////////////////////////////////
-    public Task UpdateRecordAsync(DateTime ultimoTentativoDiLettura, string uniqueIdentifier, LETTO_STATO? stato = null)
+    public Task<int> UpdateRecordAsync(DateTime ultimoTentativoDiLettura, string uniqueIdentifier, LETTO_STATO? stato = null)
     {
 		string key = uniqueIdentifier + ultimoTentativoDiLettura.ToString("o"); // "o" = formato ISO 8601, es: "2024-06-30T12:34:56.789Z"
 		lock (_lock)
@@ -51,6 +51,6 @@ public class InMemoryVerifyRepository : IVerifyRepository
 			// Aggiunge nuovo record con timestamp aggiornato
 			_records.Add(key);
 		}
-        return Task.CompletedTask;
+        return Task.FromResult(0);
     }
 }

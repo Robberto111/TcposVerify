@@ -25,6 +25,10 @@ builder.Services.AddEndpointsApiExplorer();
 		builder.Services.AddSingleton<IVerifyRepository>(new VerifyRepository(connStr));
 	}
 
+builder.Services.AddHttpClient();
+
+builder.Services.AddHttpContextAccessor();
+
 // ── Servizi di business ──────────────────────────────────────────────────────
 builder.Services.AddSingleton<ChecksumService>();
 builder.Services.AddSingleton<MondrianService>();
@@ -41,7 +45,7 @@ builder.Services.AddHsts(o =>
 var app = builder.Build();
 
 app.UseHsts();
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.Use(async (ctx, next) =>
@@ -58,9 +62,17 @@ app.UseRouting();
 app.UseAuthorization();
 app.MapControllers();
 
-// Route principale: /Verify?neg=...
-app.MapControllerRoute(
+
+app.MapControllerRoute
+(
 	name: "default",
-	pattern: "{controller=Verify}/{action=Index}/{id?}");
+	pattern: "{controller=Home}/{action=Index}/{id?}"
+);
+app.MapControllerRoute
+(
+	name: "verify",
+	pattern: "{controller=Verify}/{action=Index}/{id?}"
+);
+
 
 app.Run();
